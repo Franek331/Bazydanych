@@ -1,3 +1,4 @@
+
 <?php
 // Ten plik zawiera wspólne funkcje i połączenie z bazą danych dla obu plików
 // Można go dołączyć na początku innych plików za pomocą require_once('config.php')
@@ -40,17 +41,33 @@ function isLoggedIn() {
 // Funkcja przekierowująca niezalogowanych użytkowników
 function requireLogin() {
     if (!isLoggedIn()) {
-        header("Location: index.php");
+        header("Location: login.php");
         exit();
     }
 }
 
 // Funkcja do wylogowania użytkownika
 function logoutUser() {
-    // Usuń wszystkie zmienne sesji
-    $_SESSION = array();
+    // Usuń wszystkie zmienne sesji związane z użytkownikiem
+    if (isset($_SESSION['user_id'])) {
+        unset($_SESSION['user_id']);
+    }
     
-    // Jeśli używasz cookie do sesji, usuń cookie
+    // Usuń inne potencjalne zmienne sesji (np. koszyk, uprawnienia, itp.)
+    if (isset($_SESSION['user_name'])) {
+        unset($_SESSION['user_name']);
+    }
+    if (isset($_SESSION['user_email'])) {
+        unset($_SESSION['user_email']);
+    }
+    if (isset($_SESSION['user_role'])) {
+        unset($_SESSION['user_role']);
+    }
+    
+    // Alternatywnie, usuń wszystkie zmienne sesji
+    // $_SESSION = array();
+    
+    // Usuń cookie sesji
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
         setcookie(session_name(), '', time() - 42000,
@@ -61,4 +78,7 @@ function logoutUser() {
     
     // Zniszcz sesję
     session_destroy();
+    
+    // Rozpocznij nową sesję dla ewentualnych komunikatów po wylogowaniu
+    session_start();
 }

@@ -2,18 +2,23 @@
 // Dołącz plik konfiguracyjny
 require_once('config.php');
 
-// Sprawdź czy użytkownik jest zalogowany
-if (isLoggedIn()) {
-    // Przekieruj zalogowanego użytkownika do panelu
-    header("Location: dashboard.php");
+// Obsługa wylogowania
+if (isset($_GET['action']) && $_GET['action'] == 'logout') {
+    // Wywołaj funkcję wylogowania
+    logoutUser();
+    
+    // Dodaj komunikat o wylogowaniu (opcjonalnie)
+    $_SESSION['logout_message'] = "Zostałeś pomyślnie wylogowany.";
+    
+    // Przekieruj do strony głównej
+    header("Location: login.php");
     exit();
 }
 
-// Obsługa wylogowania
-if (isset($_GET['action']) && $_GET['action'] == 'logout') {
+// Jeśli ktoś wszedł bezpośrednio na tą stronę (bez parametru action=logout)
+// a jest zalogowany, to również go wyloguj
+if (isLoggedIn()) {
     logoutUser();
-    header("Location: index.php");
-    exit();
 }
 ?>
 
@@ -29,7 +34,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'logout') {
     <script>
         // Przekierowanie po krótkiej chwili
         setTimeout(function() {
-            window.location.href = "index.php";
+            window.location.href = "login.php";
         }, 500);
     </script>
 </body>
