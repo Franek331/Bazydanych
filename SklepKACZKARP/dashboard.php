@@ -69,45 +69,6 @@
             border-radius: 0 4px 4px 0;
             cursor: pointer;
         }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #eaeaea;
-        }
-        
-        .logo-area {
-            font-size: 24px;
-            font-weight: bold;
-        }
-        
-        .search-area {
-            flex-grow: 1;
-            margin: 0 20px;
-        }
-        
-        .search-form {
-            display: flex;
-            width: 100%;
-        }
-        
-        .search-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px 0 0 4px;
-            font-size: 16px;
-        }
-        
-        .search-button {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-        }
         
         .user-area {
             position: relative;
@@ -145,17 +106,6 @@
             font-size: 12px;
             font-weight: bold;
         }
-        .user-area {
-            position: relative;
-        }
-        
-        .user-icon {
-            cursor: pointer;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 50%;
-            background-color: #f1f1f1;
-        }
         
         .user-menu {
             position: absolute;
@@ -169,10 +119,12 @@
             z-index: 100;
             display: none;
         }
+        
         a{
             text-decoration: none;
             color: black;
         }
+        
         .user-menu.active {
             display: block;
         }
@@ -270,8 +222,8 @@
             text-align: center;
         }
         
-        /* Categories sidebar */
-        .categories-sidebar {
+        /* Filters sidebar */
+        .filters-sidebar {
             width: 250px;
             background-color: #fff;
             border-radius: 8px;
@@ -280,14 +232,70 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         
-        .category-item {
+        .filter-section {
             padding: 15px;
             border-bottom: 1px solid #eaeaea;
+        }
+        
+        .filter-section h3 {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .filter-section:last-child {
+            border-bottom: none;
+        }
+        
+        .price-inputs {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .price-inputs input {
+            width: 45%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .range-slider {
+            width: 100%;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-option {
+            margin-bottom: 10px;
+        }
+        
+        .filter-option label {
+            display: flex;
+            align-items: center;
             cursor: pointer;
         }
         
-        .category-item:hover {
-            background-color: #f8f9fa;
+        .filter-option input[type="radio"],
+        .filter-option input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        
+        .filter-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .filter-button:hover {
+            background-color: #2980b9;
         }
         
         .content-flex {
@@ -308,7 +316,7 @@
                 flex-direction: column;
             }
             
-            .categories-sidebar {
+            .filters-sidebar {
                 width: 100%;
                 margin-right: 0;
                 margin-bottom: 20px;
@@ -340,13 +348,49 @@
             background-color: #f1f1f1;
             border-radius: 4px;
         }
+        
+        /* Badge dla stanu produktu */
+        .condition-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .condition-new {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .condition-used {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .condition-refurbished {
+            background-color: #9b59b6;
+            color: white;
+        }
+        
+        /* Wyczyść filtry link */
+        .clear-filters {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .clear-filters a {
+            color: #e74c3c;
+            text-decoration: underline;
+        }
     </style>
 </head>
 
 <body>
     <?php
     // Inicjalizacja sesji
-
     
     // Sprawdzenie czy użytkownik jest zalogowany
     $is_logged_in = isset($_SESSION['user_id']);
@@ -360,9 +404,29 @@
         die("Connection failed: " . $conn->connect_error);
     }
     
-    // Sprawdzenie, czy istnieje zapytanie wyszukiwania
+    // Pobierz minimum i maksimum ceny dla suwaka
+    $price_sql = "SELECT MIN(Price) as min_price, MAX(Price) as max_price FROM products WHERE Status = 'active'";
+    $price_result = $conn->query($price_sql);
+    $price_range = $price_result->fetch_assoc();
+    $min_price = floor($price_range['min_price']);
+    $max_price = ceil($price_range['max_price']);
+    
+    // Inicjalizacja filtrów z parametrów GET
     $search_query = isset($_GET['query']) ? trim($_GET['query']) : '';
     $category_id = isset($_GET['category']) ? (int)$_GET['category'] : null;
+    $min_price_filter = isset($_GET['min_price']) ? (int)$_GET['min_price'] : $min_price;
+    $max_price_filter = isset($_GET['max_price']) ? (int)$_GET['max_price'] : $max_price;
+    $sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'newest';
+    $condition_filter = isset($_GET['condition']) ? $_GET['condition'] : [];
+    
+    // Pobierz wszystkie kategorie dla filtra
+    $categories_sql = "SELECT CategoryID, Name FROM categories ORDER BY Name";
+    $categories_result = $conn->query($categories_sql);
+    $categories = [];
+    while ($cat_row = $categories_result->fetch_assoc()) {
+        $categories[$cat_row['CategoryID']] = $cat_row['Name'];
+    }
+    
     $cart_count = 0;
     if ($is_logged_in) {
         $cart_sql = "SELECT SUM(Quantity) as total_items FROM cart WHERE UserID = ?";
@@ -375,6 +439,7 @@
         }
         $stmt->close();
     }
+    
     // Określenie tytułu sekcji w zależności od zapytania
     $section_title = "Oferty";
     if (!empty($search_query)) {
@@ -391,8 +456,6 @@
         }
         $stmt->close();
     }
-
-
     ?>
 
     <header>
@@ -403,15 +466,24 @@
                 </div>
                 
                 <div class="search-area">
-                    <form class="search-form" action="" method="GET">
+                    <form class="search-form" action="" method="GET" id="searchForm">
                         <input type="text" class="search-input" name="query" placeholder="szukanie itp" value="<?php echo htmlspecialchars($search_query); ?>">
                         <?php if ($category_id): ?>
                         <input type="hidden" name="category" value="<?php echo $category_id; ?>">
                         <?php endif; ?>
+                        <!-- Ukryte pola dla zachowania filtrów przy wyszukiwaniu -->
+                        <input type="hidden" name="min_price" value="<?php echo $min_price_filter; ?>">
+                        <input type="hidden" name="max_price" value="<?php echo $max_price_filter; ?>">
+                        <input type="hidden" name="sort_by" value="<?php echo $sort_by; ?>">
+                        <?php if (!empty($condition_filter)): ?>
+                            <?php foreach($condition_filter as $cond): ?>
+                            <input type="hidden" name="condition[]" value="<?php echo htmlspecialchars($cond); ?>">
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                         <button type="submit" class="search-button">Szukaj</button>
                     </form>
                 </div>
-                  <div class="user-area">
+                <div class="user-area">
                     <?php if ($is_logged_in): ?>
                     <div class="cart-icon" onclick="location.href='cart.php'">
                         🛒 <span class="cart-count" id="cart-count"><?php echo $cart_count; ?></span>
@@ -433,7 +505,7 @@
                                 Moje kupno
                             </div>
                             <div class="menu-item">
-                                Wiadomości
+                                <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>
                             </div>
                             <div class="menu-item">
                                 <a href="logout.php" style="text-decoration: none; color: inherit;">wyloguj</a>
@@ -456,29 +528,120 @@
         <div class="section-title"><?php echo $section_title; ?></div>
         
         <div class="content-flex">
-            <div class="categories-sidebar">
-                <div class="category-item" onclick="location.href='dashboard.php'">Wszystkie kategorie</div>
-                
-                <?php
-                // Pobranie kategorii głównych (bez nadrzędnej kategorii)
-                $sql = "SELECT CategoryID, Name FROM categories WHERE ParentCategoryID IS NULL ORDER BY Name";
-                $result = $conn->query($sql);
-                
-                if ($result->num_rows > 0) {
-                    while($row = $result->fetch_assoc()) {
-                        $active = ($category_id == $row["CategoryID"]) ? 'style="background-color: #e9ecef;"' : '';
-                        echo '<div class="category-item" ' . $active . ' onclick="location.href=\'?category=' . $row["CategoryID"] . 
-                             (empty($search_query) ? '' : '&query=' . urlencode($search_query)) . 
-                             '\'">' . htmlspecialchars($row["Name"]) . '</div>';
-                    }
-                }
-                ?>
+            <!-- Sekcja filtrów -->
+            <div class="filters-sidebar">
+                <form action="" method="GET" id="filterForm">
+                    <!-- Zachowanie wyszukiwania -->
+                    <?php if (!empty($search_query)): ?>
+                    <input type="hidden" name="query" value="<?php echo htmlspecialchars($search_query); ?>">
+                    <?php endif; ?>
+                    
+                    <!-- Zachowanie kategorii -->
+                    <?php if ($category_id): ?>
+                    <input type="hidden" name="category" value="<?php echo $category_id; ?>">
+                    <?php endif; ?>
+                    
+                    <!-- Filtr cenowy -->
+                    <div class="filter-section">
+                        <h3>Przedział cenowy</h3>
+                        <div class="price-inputs">
+                            <input type="number" name="min_price" id="minPrice" min="<?php echo $min_price; ?>" max="<?php echo $max_price; ?>" value="<?php echo $min_price_filter; ?>" step="1">
+                            <input type="number" name="max_price" id="maxPrice" min="<?php echo $min_price; ?>" max="<?php echo $max_price; ?>" value="<?php echo $max_price_filter; ?>" step="1">
+                        </div>
+                        <input type="range" id="priceRange" class="range-slider" 
+                               min="<?php echo $min_price; ?>" 
+                               max="<?php echo $max_price; ?>" 
+                               value="<?php echo $min_price_filter; ?>"
+                               step="1">
+                        <div id="priceSliderValue"></div>
+                    </div>
+                    
+                    <!-- Filtr kategorii -->
+                    <div class="filter-section">
+                        <h3>Kategoria</h3>
+                        <?php foreach($categories as $id => $name): ?>
+                        <div class="filter-option">
+                            <label>
+                                <input type="radio" name="category" value="<?php echo $id; ?>" 
+                                       <?php echo ($category_id == $id) ? 'checked' : ''; ?>>
+                                <?php echo htmlspecialchars($name); ?>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <!-- Filtr stanu produktu -->
+                    <div class="filter-section">
+                        <h3>Stan produktu</h3>
+                        <div class="filter-option">
+                            <label>
+                                <input type="checkbox" name="condition[]" value="new" 
+                                       <?php echo (in_array('new', (array)$condition_filter)) ? 'checked' : ''; ?>>
+                                Nowy
+                            </label>
+                        </div>
+                        <div class="filter-option">
+                            <label>
+                                <input type="checkbox" name="condition[]" value="used" 
+                                       <?php echo (in_array('used', (array)$condition_filter)) ? 'checked' : ''; ?>>
+                                Używany
+                            </label>
+                        </div>
+                        <div class="filter-option">
+                            <label>
+                                <input type="checkbox" name="condition[]" value="refurbished" 
+                                       <?php echo (in_array('refurbished', (array)$condition_filter)) ? 'checked' : ''; ?>>
+                                Odnowiony
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtr sortowania -->
+                    <div class="filter-section">
+                        <h3>Sortuj według</h3>
+                        <div class="filter-option">
+                            <label>
+                                <input type="radio" name="sort_by" value="newest" 
+                                       <?php echo ($sort_by == 'newest') ? 'checked' : ''; ?>>
+                                Najnowsze
+                            </label>
+                        </div>
+                        <div class="filter-option">
+                            <label>
+                                <input type="radio" name="sort_by" value="price_asc" 
+                                       <?php echo ($sort_by == 'price_asc') ? 'checked' : ''; ?>>
+                                Cena: od najniższej
+                            </label>
+                        </div>
+                        <div class="filter-option">
+                            <label>
+                                <input type="radio" name="sort_by" value="price_desc" 
+                                       <?php echo ($sort_by == 'price_desc') ? 'checked' : ''; ?>>
+                                Cena: od najwyższej
+                            </label>
+                        </div>
+                        <div class="filter-option">
+                            <label>
+                                <input type="radio" name="sort_by" value="alphabetical" 
+                                       <?php echo ($sort_by == 'alphabetical') ? 'checked' : ''; ?>>
+                                Alfabetycznie
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <button type="submit" class="filter-button">Zastosuj filtry</button>
+                        <div class="clear-filters">
+                            <a href="dashboard.php">Wyczyść filtry</a>
+                        </div>
+                    </div>
+                </form>
             </div>
             
             <div style="flex-grow: 1;">
                 <div class="cards-grid">
                     <?php
-                    // Przygotowanie zapytania SQL z wyszukiwaniem i filtrowaniem kategorii
+                    // Przygotowanie zapytania SQL z wyszukiwaniem i filtrowaniem
                     $params = [];
                     $types = "";
                     
@@ -500,32 +663,44 @@
                     
                     // Dodawanie warunku kategorii
                     if ($category_id) {
-                        // Pobierz wszystkie podkategorie
-                        $cat_ids = [$category_id];
-                        $get_subcats = function($parent_id) use ($conn, &$cat_ids, &$get_subcats) {
-                            $sql = "SELECT CategoryID FROM categories WHERE ParentCategoryID = ?";
-                            $stmt = $conn->prepare($sql);
-                            $stmt->bind_param("i", $parent_id);
-                            $stmt->execute();
-                            $result = $stmt->get_result();
-                            while ($row = $result->fetch_assoc()) {
-                                $cat_ids[] = $row['CategoryID'];
-                                $get_subcats($row['CategoryID']);
-                            }
-                            $stmt->close();
-                        };
-                        $get_subcats($category_id);
-                        
-                        // Zbuduj część zapytania dla kategorii
-                        $placeholders = str_repeat('?,', count($cat_ids) - 1) . '?';
-                        $sql .= " AND p.CategoryID IN ($placeholders)";
-                        foreach ($cat_ids as $id) {
-                            array_push($params, $id);
-                            $types .= "i";
+                        $sql .= " AND p.CategoryID = ?";
+                        array_push($params, $category_id);
+                        $types .= "i";
+                    }
+                    
+                    // Dodawanie warunku przedziału cenowego
+                    $sql .= " AND p.Price BETWEEN ? AND ?";
+                    array_push($params, $min_price_filter, $max_price_filter);
+                    $types .= "dd";
+                    
+                    // Dodawanie warunku stanu produktu
+                    if (!empty($condition_filter)) {
+                        $condition_placeholders = implode(',', array_fill(0, count($condition_filter), '?'));
+                        $sql .= " AND p.`Condition` IN ($condition_placeholders)";
+                        foreach ($condition_filter as $cond) {
+                            array_push($params, $cond);
+                            $types .= "s";
                         }
                     }
                     
-                    $sql .= " ORDER BY p.PostedDate DESC LIMIT 24";
+                    // Dodawanie sortowania
+                    switch ($sort_by) {
+                        case 'price_asc':
+                            $sql .= " ORDER BY p.Price ASC";
+                            break;
+                        case 'price_desc':
+                            $sql .= " ORDER BY p.Price DESC";
+                            break;
+                        case 'alphabetical':
+                            $sql .= " ORDER BY p.Title ASC";
+                            break;
+                        case 'newest':
+                        default:
+                            $sql .= " ORDER BY p.PostedDate DESC";
+                            break;
+                    }
+                    
+                    $sql .= " LIMIT 24";
                     
                     // Przygotowanie i wykonanie zapytania
                     $stmt = $conn->prepare($sql);
@@ -552,11 +727,30 @@
                                 $timeAgo = $interval->days . " dni temu";
                             }
                             
+                            // Klasa dla odznaki stanu produktu
+                            $conditionClass = "";
+                            $conditionText = "";
+                            switch ($row["Condition"]) {
+                                case "new":
+                                    $conditionClass = "condition-new";
+                                    $conditionText = "Nowy";
+                                    break;
+                                case "used":
+                                    $conditionClass = "condition-used";
+                                    $conditionText = "Używany";
+                                    break;
+                                case "refurbished":
+                                    $conditionClass = "condition-refurbished";
+                                    $conditionText = "Odnowiony";
+                                    break;
+                            }
+                            
                             echo '<div class="card" onclick="location.href=\'product.php?id=' . $row["ProductID"] . '\'">';
                             echo '<div class="card-img">';
                             echo '<img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($row["Title"]) . '" style="max-width: 100%; max-height: 100%;">';
                             echo '</div>';
                             echo '<div class="card-content">';
+                            echo '<span class="condition-badge ' . $conditionClass . '">' . $conditionText . '</span>';
                             echo '<h3 class="card-title">' . htmlspecialchars($row["Title"]) . '</h3>';
                             echo '<div class="card-price">' . number_format($row["Price"], 2, ',', ' ') . ' zł</div>';
                             echo '<div class="card-meta">';
@@ -588,23 +782,161 @@
     </footer>
 
     <script>
-        function toggleUserMenu() {
-            document.getElementById('userMenu').classList.toggle('active');
+
+        document.addEventListener('DOMContentLoaded', function() {
+    // User menu functionality
+    function toggleUserMenu() {
+        document.getElementById('userMenu').classList.toggle('active');
+    }
+    
+    // Close user menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const userMenu = document.getElementById('userMenu');
+        const userIcon = document.querySelector('.user-icon');
+        
+        if (userMenu && userIcon && !userIcon.contains(event.target) && !userMenu.contains(event.target)) {
+            userMenu.classList.remove('active');
+        }
+    });
+    
+    // Price range slider functionality
+    const priceRange = document.getElementById('priceRange');
+    const minPrice = document.getElementById('minPrice');
+    const maxPrice = document.getElementById('maxPrice');
+    const priceSliderValue = document.getElementById('priceSliderValue');
+    
+    if (priceRange && minPrice && maxPrice && priceSliderValue) {
+        // Update values after slider movement
+        priceRange.addEventListener('input', function() {
+            minPrice.value = this.value;
+            updatePriceSliderValue();
+        });
+        
+        // Update slider value after min field change
+        minPrice.addEventListener('input', function() {
+            if (parseInt(this.value) > parseInt(maxPrice.value)) {
+                this.value = maxPrice.value;
+            }
+            priceRange.value = this.value;
+            updatePriceSliderValue();
+        });
+        
+        // Update displayed price range value
+        function updatePriceSliderValue() {
+            priceSliderValue.textContent = `Od ${minPrice.value} do ${maxPrice.value} zł`;
         }
         
-        // Zamykanie menu użytkownika po kliknięciu poza nim
-        document.addEventListener('click', function(event) {
-            const userMenu = document.getElementById('userMenu');
-            const userIcon = document.querySelector('.user-icon');
-            
-            if (!userIcon.contains(event.target) && !userMenu.contains(event.target)) {
-                userMenu.classList.remove('active');
+        // Initialize slider value display
+        updatePriceSliderValue();
+    }
+    
+    // Filter form handling
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('change', function(e) {
+            // Automatically submit form when sorting options or category changes
+            if (e.target.name === 'sort_by' || e.target.name === 'category') {
+                this.submit();
             }
         });
+    }
+    
+    // Mobile filters toggle functionality
+    const filtersSidebar = document.querySelector('.filters-sidebar');
+    const mainContentContainer = document.querySelector('.main-content .container');
+    
+    if (filtersSidebar && mainContentContainer) {
+        const filterToggle = document.createElement('button');
+        filterToggle.textContent = 'Pokaż filtry';
+        filterToggle.classList.add('filter-button');
+        filterToggle.style.marginBottom = '15px';
+        filterToggle.style.display = 'none';
+        
+        // Add button before content
+        mainContentContainer.insertBefore(filterToggle, mainContentContainer.firstChild);
+        
+        // Check screen size and adjust view
+        function checkScreenSize() {
+            if (window.innerWidth <= 768) {
+                filterToggle.style.display = 'block';
+                filtersSidebar.style.display = 'none';
+                filterToggle.textContent = 'Pokaż filtry';
+            } else {
+                filterToggle.style.display = 'none';
+                filtersSidebar.style.display = 'block';
+            }
+        }
+        
+        // Handle filter toggle button click
+        filterToggle.addEventListener('click', function() {
+            if (filtersSidebar.style.display === 'none' || filtersSidebar.style.display === '') {
+                filtersSidebar.style.display = 'block';
+                this.textContent = 'Ukryj filtry';
+            } else {
+                filtersSidebar.style.display = 'none';
+                this.textContent = 'Pokaż filtry';
+            }
+        });
+        
+        // Check screen size on page load and resize
+        window.addEventListener('load', checkScreenSize);
+        window.addEventListener('resize', checkScreenSize);
+    }
+    
+    // Cart functionality
+    function addToCart(productId, quantity = 1) {
+        // Check if user is logged in (PHP variable converted to JS boolean)
+        const isLoggedIn = window.isLoggedIn || false; // This should be set elsewhere based on PHP
+        
+        if (isLoggedIn) {
+            fetch('add_to_cart.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `product_id=${productId}&quantity=${quantity}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const cartCount = document.getElementById('cart-count');
+                    if (cartCount) {
+                        cartCount.textContent = parseInt(cartCount.textContent) + quantity;
+                    }
+                    alert('Produkt dodany do koszyka!');
+                } else {
+                    alert('Wystąpił błąd: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Wystąpił błąd podczas dodawania do koszyka.');
+            });
+        } else {
+            alert('Musisz być zalogowany, aby dodać produkt do koszyka.');
+            window.location.href = 'login.php';
+        }
+    }
+    
+    // Make addToCart available globally
+    window.addToCart = addToCart;
+    
+    // Card animation handling
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px)';
+            this.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.2)';
+            this.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+        });
+    });
+    
+    // Make toggleUserMenu available globally
+    window.toggleUserMenu = toggleUserMenu;
+});
     </script>
-</body>
-</html>
-<?php
-// Zamknięcie połączenia z bazą danych
-$conn->close();
-?>
