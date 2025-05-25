@@ -1,11 +1,16 @@
 <?php
+// Inicjalizacja sesji
 session_start();
 
 // Sprawdzenie czy użytkownik jest zalogowany
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
+    header("Location: login.php?redirect=checkout.php" . (isset($_GET['id']) ? "?id=" . $_GET['id'] : ""));
+    exit();
 }
+
+$is_logged_in = true;
+$current_user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'];
 
 // Połączenie z bazą danych
 $conn = new mysqli("localhost", "root", "", "sklep_internetowy");
@@ -15,125 +20,141 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$user_id = $_SESSION['user_id'];
-$error_message = "";
-$success_message = "";
-
-// Pobranie danych użytkownika
-$user_data = [];
-$user_query = "SELECT * FROM users WHERE UserID = ?";
-$stmt = $conn->prepare($user_query);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($row = $result->fetch_assoc()) {
-    $user_data = $row;
+// Sprawdzenie, czy ID produktu jest dostępne
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header("Location: dashboard.php");
+    exit();
 }
-$stmt->close();
 
-// Pobranie zawartości koszyka
-$cart_items = [];
-$total_price = 0;
+$product_id = (int)$_GET['id'];
 
-$sql = "SELECT c.CartID, c.ProductID, c.Quantity, p.Title, p.Price, p.SellerID,
-        (SELECT ImageURL FROM productimages WHERE ProductID = p.ProductID AND IsPrimary = TRUE LIMIT 1) as PrimaryImage
-        FROM cart c
-        JOIN products p ON c.ProductID = p.ProductID
-        WHERE c.UserID = ?";
+// Pobieranie informacji o produkcie
+$sql = "SELECT p.*, c.Name as CategoryName, u.Username as SellerName, 
+        u.FirstName as SellerFirstName, u.LastName as SellerLastName, u.UserID as SellerID
+        FROM products p
+        JOIN categories c ON p.CategoryID = c.CategoryID
+        JOIN users u ON p.SellerID = u.UserID
+        WHERE p.ProductID = ? AND p.Status = 'active'";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
+$stmt->bind_param("i", $product_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
-while ($row = $result->fetch_assoc()) {
-    $row['Subtotal'] = $row['Price'] * $row['Quantity'];
-    $total_price += $row['Subtotal'];
-    $cart_items[] = $row;
+if ($result->num_rows === 0) {
+    // Produkt nie istnieje lub nie jest aktywny
+    header("Location: dashboard.php");
+    exit();
 }
+
+$product = $result->fetch_assoc();
 $stmt->close();
 
-// Jeśli koszyk jest pusty, przekieruj do koszyka
-if (empty($cart_items)) {
-    header("Location: cart.php");
-    exit;
+// Sprawdzenie czy użytkownik nie kupuje własnego produktu
+if ($product['SellerID'] == $current_user_id) {
+    header("Location: product.php?id=$product_id&error=own_product");
+    exit();
 }
 
-// Obsługa formularza zamówienia
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
-    // Walidacja danych
+// Pobieranie danych użytkownika (dla wypełnienia formularza)
+$user_sql = "SELECT * FROM users WHERE UserID = ?";
+$stmt = $conn->prepare($user_sql);
+$stmt->bind_param("i", $current_user_id);
+$stmt->execute();
+$user_result = $stmt->get_result();
+$user = $user_result->fetch_assoc();
+$stmt->close();
+
+// Obsługa formularza płatności
+$error_message = '';
+$success_message = '';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['place_order'])) {
+    // Walidacja formularza
     $first_name = trim($_POST['first_name']);
     $last_name = trim($_POST['last_name']);
-    $email = trim($_POST['email']);
-    $phone = trim($_POST['phone']);
     $address = trim($_POST['address']);
+    $city = trim($_POST['city']);
+    $zip_code = trim($_POST['zip_code']);
     $payment_method = $_POST['payment_method'];
     
-    $is_valid = true;
-    
-    if (empty($first_name) || empty($last_name) || empty($email) || empty($phone) || empty($address)) {
-        $error_message = "Wszystkie pola adresowe są wymagane";
-        $is_valid = false;
-    }
-    
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error_message = "Podaj prawidłowy adres email";
-        $is_valid = false;
-    }
-    
-    if ($is_valid) {
-        // Rozpoczęcie transakcji
+    if (empty($first_name) || empty($last_name) || empty($address) || empty($city) || empty($zip_code)) {
+        $error_message = 'Wszystkie pola adresu są wymagane.';
+    } else {
+        // Formatowanie adresu dostawy
+        $shipping_address = "$first_name $last_name\n$address\n$zip_code $city";
+        
+        // Rozpocznij transakcję
         $conn->begin_transaction();
         
         try {
-            // Aktualizacja danych użytkownika, jeśli zostały zmienione
-            $update_user = $conn->prepare("UPDATE users SET FirstName = ?, LastName = ?, Email = ?, PhoneNumber = ?, Address = ? WHERE UserID = ?");
-            $update_user->bind_param("sssssi", $first_name, $last_name, $email, $phone, $address, $user_id);
-            $update_user->execute();
-            $update_user->close();
+            // 1. Sprawdzenie, czy produkt jest nadal dostępny
+            $check_sql = "SELECT Status FROM products WHERE ProductID = ? AND Status = 'active' FOR UPDATE";
+            $stmt = $conn->prepare($check_sql);
+            $stmt->bind_param("i", $product_id);
+            $stmt->execute();
+            $check_result = $stmt->get_result();
             
-            // Utworzenie zamówienia
-            $order_stmt = $conn->prepare("INSERT INTO orders (BuyerID, TotalAmount, Status, ShippingAddress, PaymentMethod, PaymentStatus) VALUES (?, ?, 'pending', ?, ?, 'pending')");
-            $order_stmt->bind_param("idss", $user_id, $total_price, $address, $payment_method);
-            $order_stmt->execute();
-            $order_id = $conn->insert_id;
-            $order_stmt->close();
-            
-            // Dodanie szczegółów zamówienia
-            foreach ($cart_items as $item) {
-                $detail_stmt = $conn->prepare("INSERT INTO orderdetails (OrderID, ProductID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)");
-                $detail_stmt->bind_param("iiid", $order_id, $item['ProductID'], $item['Quantity'], $item['Price']);
-                $detail_stmt->execute();
-                $detail_stmt->close();
-                
-                // Aktualizacja stanu magazynowego produktu
-                $update_product = $conn->prepare("UPDATE products SET Quantity = Quantity - ? WHERE ProductID = ? AND Quantity >= ?");
-                $update_product->bind_param("iii", $item['Quantity'], $item['ProductID'], $item['Quantity']);
-                $update_product->execute();
-                $update_product->close();
+            if ($check_result->num_rows === 0) {
+                throw new Exception("Produkt nie jest już dostępny.");
             }
             
-            // Wyczyszczenie koszyka
-            $clear_cart = $conn->prepare("DELETE FROM cart WHERE UserID = ?");
-            $clear_cart->bind_param("i", $user_id);
-            $clear_cart->execute();
-            $clear_cart->close();
+            // 2. Utworzenie zamówienia
+            $order_sql = "INSERT INTO orders (BuyerID, TotalAmount, Status, ShippingAddress, PaymentMethod, PaymentStatus) 
+                          VALUES (?, ?, 'paid', ?, ?, 'completed')";
+            $stmt = $conn->prepare($order_sql);
+            $stmt->bind_param("idss", $current_user_id, $product['Price'], $shipping_address, $payment_method);
+            $stmt->execute();
+            $order_id = $conn->insert_id;
             
-            // Zatwierdzenie transakcji
+            // 3. Dodanie szczegółów zamówienia
+            $detail_sql = "INSERT INTO orderdetails (OrderID, ProductID, Quantity, UnitPrice) 
+                           VALUES (?, ?, 1, ?)";
+            $stmt = $conn->prepare($detail_sql);
+            $stmt->bind_param("iid", $order_id, $product_id, $product['Price']);
+            $stmt->execute();
+            
+            // 4. Aktualizacja statusu produktu na "sprzedany"
+            $update_sql = "UPDATE products SET Status = 'sold' WHERE ProductID = ?";
+            $stmt = $conn->prepare($update_sql);
+            $stmt->bind_param("i", $product_id);
+            $stmt->execute();
+            
+            // Zatwierdź transakcję
             $conn->commit();
             
-            // Przekierowanie do strony potwierdzenia
-            header("Location: order_confirmation.php?order_id=".$order_id);
-            exit;
-            
+            $success_message = "Zamówienie zostało złożone pomyślnie!";
         } catch (Exception $e) {
-            // Wycofanie transakcji w przypadku błędu
+            // Wycofaj transakcję w przypadku błędu
             $conn->rollback();
-            $error_message = "Wystąpił błąd podczas przetwarzania zamówienia: " . $e->getMessage();
+            $error_message = "Wystąpił błąd: " . $e->getMessage();
         }
     }
 }
+
+// Pobieranie liczby produktów w koszyku
+$cart_count = 0;
+$cart_sql = "SELECT SUM(Quantity) as total_items FROM cart WHERE UserID = ?";
+$stmt = $conn->prepare($cart_sql);
+$stmt->bind_param("i", $current_user_id);
+$stmt->execute();
+$cart_result = $stmt->get_result();
+if ($row = $cart_result->fetch_assoc()) {
+    $cart_count = $row['total_items'] ? $row['total_items'] : 0;
+}
+$stmt->close();
+
+// Pobieranie głównego zdjęcia produktu
+$image_sql = "SELECT ImageURL FROM productimages WHERE ProductID = ? AND IsPrimary = TRUE LIMIT 1";
+$stmt = $conn->prepare($image_sql);
+$stmt->bind_param("i", $product_id);
+$stmt->execute();
+$image_result = $stmt->get_result();
+$image = "default-product-image.jpg"; // domyślny obraz
+if ($image_row = $image_result->fetch_assoc()) {
+    $image = $image_row['ImageURL'];
+}
+$stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -141,7 +162,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Złóż zamówienie - Serwis Ogłoszeniowy</title>
+    <title>Realizacja zamówienia - Serwis Ogłoszeniowy</title>
     <style>
         * {
             margin: 0;
@@ -160,6 +181,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             padding: 0 15px;
         }
         
+        /* Header - style z dashboard.php */
         header {
             background-color: #fff;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -177,6 +199,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
         .logo-area {
             font-size: 24px;
             font-weight: bold;
+        }
+        
+        .search-area {
+            flex-grow: 1;
+            margin: 0 20px;
+        }
+        
+        .search-form {
+            display: flex;
+            width: 100%;
+        }
+        
+        .search-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            font-size: 16px;
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
         }
         
         .user-area {
@@ -229,6 +278,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             display: none;
         }
         
+        a {
+            text-decoration: none;
+            color: black;
+        }
+        
         .user-menu.active {
             display: block;
         }
@@ -249,25 +303,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             background-color: #f8f9fa;
         }
         
-        .menu-item span {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .main-content {
-            padding: 30px 0;
-        }
-        
-        .section-title {
-            font-size: 28px;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
+        /* Style dla strony checkoutu */
         .checkout-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+            padding: 20px;
+        }
+        
+        .checkout-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .checkout-content {
             display: flex;
-            gap: 30px;
             flex-wrap: wrap;
+            gap: 20px;
         }
         
         .checkout-form {
@@ -275,16 +330,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             min-width: 300px;
         }
         
-        .checkout-summary {
-            flex: 0 0 350px;
-        }
-        
-        .form-section {
-            background-color: #fff;
+        .order-summary {
+            width: 350px;
+            background-color: #f9f9f9;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
         
         .form-group {
@@ -295,161 +345,105 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #333;
         }
         
-        .form-control {
+        .form-group input,
+        .form-group select {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
         }
         
-        .radio-group {
-            margin-top: 10px;
-        }
-        
-        .radio-option {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .radio-option:hover {
-            background-color: #f8f9fa;
+        .form-group input:focus,
+        .form-group select:focus {
             border-color: #3498db;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            outline: none;
         }
         
-        .radio-option input {
-            margin-right: 12px;
-        }
-        
-        .radio-option img {
-            height: 30px;
-            max-width: 80px;
-            object-fit: contain;
-        }
-        
-        .payment-label {
+        .product-summary {
             display: flex;
-            align-items: center;
-            flex-grow: 1;
-        }
-        
-        .section-heading {
-            font-size: 20px;
             margin-bottom: 15px;
-            color: #333;
-            border-bottom: 1px solid #eaeaea;
-            padding-bottom: 10px;
-        }
-        
-        .radio-option input:checked + span {
-            font-weight: bold;
-            color: #3498db;
-        }
-        
-        .radio-option:has(input:checked) {
-            border-color: #3498db;
-            background-color: rgba(52, 152, 219, 0.05);
-            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
-        }
-        
-        .summary-box {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .product-list {
-            margin-bottom: 20px;
-        }
-        
-        .product-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
+            padding-bottom: 15px;
             border-bottom: 1px solid #eaeaea;
         }
         
-        .product-item:last-child {
-            border-bottom: none;
+        .product-image {
+            width: 80px;
+            height: 80px;
+            margin-right: 10px;
+            border-radius: 4px;
+            overflow: hidden;
         }
         
-        .product-name {
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .product-details {
             flex: 1;
         }
         
-        .product-quantity {
-            width: 60px;
-            text-align: center;
-            color: #666;
+        .product-title {
+            font-weight: bold;
+            margin-bottom: 5px;
         }
         
         .product-price {
-            width: 100px;
-            text-align: right;
+            font-size: 18px;
+            color: #3498db;
             font-weight: bold;
         }
         
         .summary-row {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            font-size: 16px;
+            margin-bottom: 10px;
         }
         
         .total-row {
             display: flex;
             justify-content: space-between;
-            padding: 15px 0;
-            border-top: 2px solid #eaeaea;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #eaeaea;
         }
         
-        .submit-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: #27ae60;
+        .checkout-button {
+            background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            padding: 12px 20px;
             font-size: 16px;
             font-weight: bold;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 20px;
         }
         
-        .submit-btn:hover {
-            background-color: #219653;
+        .checkout-button:hover {
+            background-color: #45a049;
         }
         
-        .error-message {
-            background-color: #ffecec;
-            color: #e74c3c;
-            padding: 10px;
-            border-radius: 4px;
+        .alert-success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 15px;
             margin-bottom: 20px;
-            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
         }
         
-        .success-message {
-            background-color: #e7f7ef;
-            color: #27ae60;
-            padding: 10px;
-            border-radius: 4px;
+        .alert-error {
+            background-color: #f2dede;
+            color: #a94442;
+            padding: 15px;
             margin-bottom: 20px;
-            border-left: 4px solid #27ae60;
+            border-radius: 4px;
         }
         
         .footer {
@@ -460,36 +454,64 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             margin-top: 40px;
         }
         
+        .success-message {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .success-message h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        
+        .success-message p {
+            margin-bottom: 20px;
+        }
+        
+        .success-message .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .success-message .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        
+        .success-message .button.green {
+            background-color: #4CAF50;
+        }
+        
         @media (max-width: 768px) {
-            .checkout-container {
+            .checkout-content {
                 flex-direction: column;
             }
             
-            .checkout-summary {
-                order: -1;
+            .order-summary {
+                width: 100%;
             }
-        }
-        
-        a {
-            text-decoration: none;
-            color: inherit;
         }
     </style>
 </head>
-<body>
-    <?php
-    // Obliczenie łącznej liczby przedmiotów w koszyku
-    $cart_count = 0;
-    foreach ($cart_items as $item) {
-        $cart_count += $item['Quantity'];
-    }
-    ?>
 
+<body>
     <header>
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
+                </div>
+                
+                <div class="search-area">
+                    <form class="search-form" action="dashboard.php" method="GET">
+                        <input type="text" class="search-input" name="query" placeholder="szukanie itp">
+                        <button type="submit" class="search-button">Szukaj</button>
+                    </form>
                 </div>
                 
                 <div class="user-area">
@@ -498,8 +520,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
                     </div>
                     
                     <div class="user-icon" onclick="toggleUserMenu()">
-                        <?php echo htmlspecialchars($_SESSION['username']); ?>
+                        <?php echo htmlspecialchars($username); ?>
                     </div>
+                    
                     <div class="user-menu" id="userMenu">
                         <div class="menu-item">
                             <a href="account_management.php">Zarządzaj kontem</a>
@@ -508,10 +531,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
                             <a href="add-product.php">Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            Moje kupno
+                            <a href="purchase-history.php">Moje kupno</a>
                         </div>
                         <div class="menu-item">
-                            Wiadomości
+                            <a href="messages.php">Wiadomości</a>
+                        </div>
+                        <div class="menu-item">
+                            <a href="help.php">O stronie</a>
                         </div>
                         <div class="menu-item">
                             <a href="logout.php">wyloguj</a>
@@ -522,134 +548,121 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
         </div>
     </header>
 
-    <main class="main-content container">
-        <div class="section-title">Podsumowanie zamówienia</div>
-        
-        <?php if (!empty($error_message)): ?>
-            <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
-        <?php endif; ?>
-        
-        <?php if (!empty($success_message)): ?>
-            <div class="success-message"><?php echo htmlspecialchars($success_message); ?></div>
-        <?php endif; ?>
-        
-        <div class="checkout-container">
-            <div class="checkout-form">
-                <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
-                    <div class="form-section">
-                        <h2 class="section-heading">Dane dostawy</h2>
-                        
-                        <div class="form-group">
-                            <label for="first_name">Imię</label>
-                            <input type="text" id="first_name" name="first_name" class="form-control" 
-                                value="<?php echo htmlspecialchars($user_data['FirstName'] ?? ''); ?>" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="last_name">Nazwisko</label>
-                            <input type="text" id="last_name" name="last_name" class="form-control" 
-                                value="<?php echo htmlspecialchars($user_data['LastName'] ?? ''); ?>" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" class="form-control" 
-                                value="<?php echo htmlspecialchars($user_data['Email'] ?? ''); ?>" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="phone">Telefon</label>
-                            <input type="tel" id="phone" name="phone" class="form-control" 
-                                value="<?php echo htmlspecialchars($user_data['PhoneNumber'] ?? ''); ?>" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="address">Adres dostawy</label>
-                            <textarea id="address" name="address" class="form-control" rows="4" required><?php echo htmlspecialchars($user_data['Address'] ?? ''); ?></textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h2 class="section-heading">Metoda płatności</h2>
-                        
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <div class="payment-label">
-                                    <input type="radio" name="payment_method" value="bank_transfer" checked> 
-                                    <span>Przelew bankowy</span>
-                                </div>
-                                <img src="Przelew.png" alt="Przelew">
-                            </label>
-                            
-                            <label class="radio-option">
-                                <div class="payment-label">
-                                    <input type="radio" name="payment_method" value="blik"> 
-                                    <span>BLIK</span>
-                                </div>
-                                <img src="blik.png" alt="BLIK">
-                            </label>
-                            
-                            <label class="radio-option">
-                                <div class="payment-label">
-                                    <input type="radio" name="payment_method" value="credit_card"> 
-                                    <span>Karta kredytowa</span>
-                                </div>
-                                <img src="KartaKredytowa.png" alt="Karta kredytowa">
-                            </label>
-                            
-                            <label class="radio-option">
-                                <div class="payment-label">
-                                    <input type="radio" name="payment_method" value="paypal"> 
-                                    <span>PayPal</span>
-                                </div>
-                                <img src="Peypal.png" alt="PayPal">
-                            </label>
-                            
-                            <label class="radio-option">
-                                <div class="payment-label">
-                                    <input type="radio" name="payment_method" value="cash_on_delivery"> 
-                                    <span>Płatność przy odbiorze</span>
-                                </div>
-                                <img src="PrzyOdbiorze.png" alt="Płatność przy odbiorze">
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" name="submit_order" class="submit-btn">Złóż zamówienie</button>
-                </form>
-            </div>
-            
-            <div class="checkout-summary">
-                <div class="summary-box">
-                    <h2 class="section-heading">Twoje produkty</h2>
-                    
-                    <div class="product-list">
-                        <?php foreach ($cart_items as $item): ?>
-                            <div class="product-item">
-                                <div class="product-name"><?php echo htmlspecialchars($item['Title']); ?></div>
-                                <div class="product-quantity">x<?php echo $item['Quantity']; ?></div>
-                                <div class="product-price"><?php echo number_format($item['Subtotal'], 2, ',', ' '); ?> zł</div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    
-                    <div class="summary-row">
-                        <div>Suma częściowa</div>
-                        <div><?php echo number_format($total_price, 2, ',', ' '); ?> zł</div>
-                    </div>
-                    
-                    <div class="summary-row">
-                        <div>Koszt dostawy</div>
-                        <div>0,00 zł</div>
-                    </div>
-                    
-                    <div class="total-row">
-                        <div>Do zapłaty</div>
-                        <div><?php echo number_format($total_price, 2, ',', ' '); ?> zł</div>
+    <main class="container">
+        <?php if ($success_message): ?>
+            <div class="checkout-container">
+                <div class="success-message">
+                    <h2>Dziękujemy za złożenie zamówienia!</h2>
+                    <p>Twoje zamówienie zostało pomyślnie złożone i opłacone.</p>
+                    <p>Wkrótce otrzymasz potwierdzenie na adres e-mail.</p>
+                    <div class="buttons">
+                        <a href="dashboard.php" class="button">Powrót do strony głównej</a>
+                        <a href="purchase-history.php" class="button green">Zobacz swoje zamówienia</a>
                     </div>
                 </div>
             </div>
-        </div>
+        <?php else: ?>
+            <div class="checkout-container">
+                <h1 class="checkout-title">Realizacja zamówienia</h1>
+                
+                <?php if ($error_message): ?>
+                    <div class="alert-error"><?php echo $error_message; ?></div>
+                <?php endif; ?>
+                
+                <div class="checkout-content">
+                    <div class="checkout-form">
+                        <h2>Dane do wysyłki</h2>
+                        <form method="POST" action="">
+                            <div class="form-group">
+                                <label for="first_name">Imię</label>
+                                <input type="text" id="first_name" name="first_name" value="<?php echo isset($user['FirstName']) ? htmlspecialchars($user['FirstName']) : ''; ?>" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="last_name">Nazwisko</label>
+                                <input type="text" id="last_name" name="last_name" value="<?php echo isset($user['LastName']) ? htmlspecialchars($user['LastName']) : ''; ?>" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="address">Adres</label>
+                                <input type="text" id="address" name="address" value="<?php echo isset($user['Address']) ? htmlspecialchars($user['Address']) : ''; ?>" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="city">Miasto</label>
+                                <input type="text" id="city" name="city" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="zip_code">Kod pocztowy</label>
+                                <input type="text" id="zip_code" name="zip_code" required>
+                            </div>
+                            
+                            <h2 style="margin-top: 30px;">Metoda płatności</h2>
+                            
+                            <div class="form-group">
+                                <label for="payment_method">Wybierz metodę płatności</label>
+                                <select id="payment_method" name="payment_method" required>
+                                    <option value="credit_card">Karta kredytowa/debetowa</option>
+                                    <option value="blik">BLIK</option>
+                                    <option value="bank_transfer">Przelew bankowy</option>
+                                    <option value="paypal">PayPal</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" id="credit_card_details">
+                                <label for="card_number">Numer karty</label>
+                                <input type="text" id="card_number" placeholder="1234 5678 9012 3456" maxlength="19">
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                    <div style="flex: 1;">
+                                        <label for="expiry_date">Data ważności</label>
+                                        <input type="text" id="expiry_date" placeholder="MM/RR" maxlength="5">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label for="cvv">CVV</label>
+                                        <input type="text" id="cvv" placeholder="123" maxlength="3">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" name="place_order" class="checkout-button">Zapłać i zamów</button>
+                        </form>
+                    </div>
+                    
+                    <div class="order-summary">
+                        <h2>Podsumowanie zamówienia</h2>
+                        
+                        <div class="product-summary">
+                            <div class="product-image">
+                                <img src="<?php echo htmlspecialchars($image); ?>" alt="<?php echo htmlspecialchars($product['Title']); ?>">
+                            </div>
+                            <div class="product-details">
+                                <div class="product-title"><?php echo htmlspecialchars($product['Title']); ?></div>
+                                <div class="product-meta">Kategoria: <?php echo htmlspecialchars($product['CategoryName']); ?></div>
+                                <div class="product-meta">Sprzedawca: <?php echo htmlspecialchars($product['SellerName']); ?></div>
+                                <div class="product-price"><?php echo number_format($product['Price'], 2, ',', ' '); ?> zł</div>
+                            </div>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>Cena produktu:</span>
+                            <span><?php echo number_format($product['Price'], 2, ',', ' '); ?> zł</span>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>Koszt dostawy:</span>
+                            <span>0,00 zł</span>
+                        </div>
+                        
+                        <div class="total-row">
+                            <span>Razem do zapłaty:</span>
+                            <span><?php echo number_format($product['Price'], 2, ',', ' '); ?> zł</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </main>
 
     <footer class="footer">
@@ -659,6 +672,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
     </footer>
 
     <script>
+        // Funkcja do przełączania menu użytkownika
         function toggleUserMenu() {
             document.getElementById('userMenu').classList.toggle('active');
         }
@@ -673,46 +687,56 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_order'])) {
             }
         });
         
-        // Obsługa wyboru metody płatności
+        // Dynamiczne pokazywanie/ukrywanie pól dla karty kredytowej
         document.addEventListener('DOMContentLoaded', function() {
-            const paymentOptions = document.querySelectorAll('input[name="payment_method"]');
+            const paymentMethodSelect = document.getElementById('payment_method');
+            const creditCardDetails = document.getElementById('credit_card_details');
             
-            // Dodanie efektu zaznaczenia po kliknięciu w dowolne miejsce na elemencie
-            document.querySelectorAll('.radio-option').forEach(function(option) {
-                option.addEventListener('click', function() {
-                    const radio = this.querySelector('input[type="radio"]');
-                    radio.checked = true;
-                    
-                    // Wywołanie zdarzenia zmiany dla wywołania poniższej funkcji
-                    radio.dispatchEvent(new Event('change'));
-                });
-            });
-            
-            // Funkcja podświetlająca wybraną opcję
-            function highlightSelectedOption() {
-                paymentOptions.forEach(function(option) {
-                    const parent = option.closest('.radio-option');
-                    if (option.checked) {
-                        parent.style.borderColor = '#3498db';
-                        parent.style.backgroundColor = 'rgba(52, 152, 219, 0.05)';
-                        parent.style.boxShadow = '0 2px 8px rgba(52, 152, 219, 0.2)';
+            if (paymentMethodSelect && creditCardDetails) {
+                paymentMethodSelect.addEventListener('change', function() {
+                    if (this.value === 'credit_card') {
+                        creditCardDetails.style.display = 'block';
                     } else {
-                        parent.style.borderColor = '#ddd';
-                        parent.style.backgroundColor = '';
-                        parent.style.boxShadow = '';
+                        creditCardDetails.style.display = 'none';
                     }
                 });
             }
             
-            // Podświetl początkowo wybraną opcję
-            highlightSelectedOption();
+            // Formatowanie numeru karty
+            const cardNumberInput = document.getElementById('card_number');
+            if (cardNumberInput) {
+                cardNumberInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                    let formattedValue = '';
+                    
+                    for (let i = 0; i < value.length; i++) {
+                        if (i > 0 && i % 4 === 0) {
+                            formattedValue += ' ';
+                        }
+                        formattedValue += value[i];
+                    }
+                    
+                    e.target.value = formattedValue;
+                });
+            }
             
-            // Nasłuchuj zmian w wyborze metody płatności
-            paymentOptions.forEach(function(option) {
-                option.addEventListener('change', highlightSelectedOption);
-            });
+            // Formatowanie daty ważności
+            const expiryDateInput = document.getElementById('expiry_date');
+            if (expiryDateInput) {
+                expiryDateInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/[^0-9]/gi, '');
+                    
+                    if (value.length > 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                    }
+                    
+                    e.target.value = value;
+                });
+            }
         });
     </script>
 </body>
 </html>
-<?php $conn->close(); ?>
+<?php
+$conn->close();
+?>

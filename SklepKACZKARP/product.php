@@ -623,7 +623,7 @@ if ($is_logged_in) {
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">
@@ -698,7 +698,7 @@ if ($is_logged_in) {
                     <?php endif; ?>
                     
                     <?php if ($is_logged_in && $current_user_id != $product['SellerID']): ?>
-                    <button class="buy-btn" onclick="location.href='buy.php?id=<?php echo $product_id; ?>'">Kup teraz</button>
+                    <button class="buy-btn" onclick="location.href='checkout.php?id=<?php echo $product_id; ?>'">Kup teraz</button>
                      <button class="add-to-cart-btn" onclick="addToCart(<?php echo $product_id; ?>)">Dodaj do koszyka</button>
                     <?php endif; ?>
                 </div>

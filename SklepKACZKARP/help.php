@@ -402,7 +402,7 @@
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">
@@ -430,7 +430,7 @@
                                 <a href="add-product.php">Moje oferty</a>
                             </div>
                             <div class="menu-item">
-                                Moje kupno
+                                <a href="purchase-history.php">Moje kupno</a>
                             </div>
                             <div class="menu-item">
                                 <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>

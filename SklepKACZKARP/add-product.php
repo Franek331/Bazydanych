@@ -519,7 +519,7 @@ $products_result = $stmt->get_result();
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php" style="text-decoration: none; color: inherit;">Serwis Ogłoszeniowy</a>
+                    <a href="dashboard.php" style="text-decoration: none; color: inherit;"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">
@@ -542,7 +542,7 @@ $products_result = $stmt->get_result();
                             <a href="add-product.php" style="text-decoration: none; color: inherit;">Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            <a href="myorders.php" style="text-decoration: none; color: inherit;">Moje kupno</a>
+                            <a href="purchase-history.php" style="text-decoration: none; color: inherit;">Moje kupno</a>
                         </div>
                         <div class="menu-item">
                             <a href="messages.php" style="text-decoration: none; color: inherit;">Wiadomości</a>

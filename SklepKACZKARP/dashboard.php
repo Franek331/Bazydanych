@@ -220,6 +220,7 @@
             border-radius: 8px;
             margin-left: 20px;
             text-align: center;
+            width: 20%;
         }
         
         /* Filters sidebar */
@@ -462,7 +463,7 @@
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">
@@ -502,7 +503,7 @@
                                 <a href="add-product.php">Moje oferty</a>
                             </div>
                             <div class="menu-item">
-                                Moje kupno
+                                <a href="purchase-history.php">Moje kupno</a>
                             </div>
                             <div class="menu-item">
                                 <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>
@@ -773,7 +774,8 @@
             </div>
             
             <div class="ads-sidebar">
-                Nasze reklamy for fun
+                <img src="reklama1.png" alt="reklama" style="width: 100%; height: auto; border-radius: 8px;">
+                <img src="reklama2.png" alt="reklama" style="width: 100%; height: auto; border-radius: 8px; margin-top: 15px;">
             </div>
         </div>
     </main>

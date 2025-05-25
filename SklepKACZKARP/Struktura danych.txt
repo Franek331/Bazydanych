@@ -1,0 +1,140 @@
+CREATE DATABASE IF NOT EXISTS sklep_internetowy;
+USE sklep_internetowy;
+
+-- Tabela użytkowników
+CREATE TABLE IF NOT EXISTS users (
+    UserID INT PRIMARY KEY AUTO_INCREMENT,
+    Username VARCHAR(50) NOT NULL UNIQUE,
+    Email VARCHAR(100) NOT NULL UNIQUE,
+    Password VARCHAR(255) NOT NULL, -- Hasło powinno być zahashowane
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    PhoneNumber VARCHAR(15),
+    Address TEXT,
+    RegistrationDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    LastLoginDate DATETIME,
+    IsActive BOOLEAN DEFAULT TRUE,
+    UserRole ENUM('regular', 'admin') DEFAULT 'regular'
+);
+
+-- Tabela kategorii produktów
+CREATE TABLE IF NOT EXISTS categories (
+    CategoryID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Description TEXT,
+    ParentCategoryID INT,
+    FOREIGN KEY (ParentCategoryID) REFERENCES categories(CategoryID)
+);
+
+-- Tabela produktów (ogłoszeń)
+CREATE TABLE IF NOT EXISTS products (
+    ProductID INT PRIMARY KEY AUTO_INCREMENT,
+    SellerID INT NOT NULL,
+    CategoryID INT NOT NULL,
+    Title VARCHAR(100) NOT NULL,
+    Description TEXT,
+    Price DECIMAL(10, 2) NOT NULL,
+    Quantity INT DEFAULT 1,
+    `Condition` ENUM('new', 'used', 'refurbished') NOT NULL,
+    PostedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Status ENUM('active', 'sold', 'cancelled') DEFAULT 'active',
+    FOREIGN KEY (SellerID) REFERENCES users(UserID),
+    FOREIGN KEY (CategoryID) REFERENCES categories(CategoryID)
+);
+
+-- Tabela zdjęć produktów
+CREATE TABLE IF NOT EXISTS productimages (
+    ImageID INT PRIMARY KEY AUTO_INCREMENT,
+    ProductID INT NOT NULL,
+    ImageURL VARCHAR(255) NOT NULL,
+    IsPrimary BOOLEAN DEFAULT FALSE,
+    UploadDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID) ON DELETE CASCADE
+);
+
+-- Tabela zamówień
+CREATE TABLE IF NOT EXISTS orders (
+    OrderID INT PRIMARY KEY AUTO_INCREMENT,
+    BuyerID INT NOT NULL,
+    OrderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    TotalAmount DECIMAL(10, 2) NOT NULL,
+    Status ENUM('pending', 'paid', 'shipped', 'completed', 'cancelled') DEFAULT 'pending',
+    ShippingAddress TEXT,
+    PaymentMethod VARCHAR(50),
+    PaymentStatus ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    FOREIGN KEY (BuyerID) REFERENCES users(UserID)
+);
+
+-- Tabela szczegółów zamówienia
+CREATE TABLE IF NOT EXISTS orderdetails (
+    OrderDetailID INT PRIMARY KEY AUTO_INCREMENT,
+    OrderID INT NOT NULL,
+    ProductID INT NOT NULL,
+    Quantity INT NOT NULL DEFAULT 1,
+    UnitPrice DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (OrderID) REFERENCES orders(OrderID),
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID)
+);
+
+-- Tabela ocen i recenzji
+CREATE TABLE IF NOT EXISTS reviews (
+    ReviewID INT PRIMARY KEY AUTO_INCREMENT,
+    ProductID INT NOT NULL,
+    UserID INT NOT NULL,
+    Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5),
+    Comment TEXT,
+    ReviewDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID),
+    FOREIGN KEY (UserID) REFERENCES users(UserID)
+);
+
+-- Tabela wiadomości między użytkownikami
+CREATE TABLE IF NOT EXISTS messages (
+    MessageID INT PRIMARY KEY AUTO_INCREMENT,
+    SenderID INT NOT NULL,
+    ReceiverID INT NOT NULL,
+    ProductID INT,
+    MessageContent TEXT NOT NULL,
+    SentDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    IsRead BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (SenderID) REFERENCES users(UserID),
+    FOREIGN KEY (ReceiverID) REFERENCES users(UserID),
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID)
+);
+
+-- Tabela obserwowanych produktów
+CREATE TABLE IF NOT EXISTS favorites (
+    FavoriteID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT NOT NULL,
+    ProductID INT NOT NULL,
+    AddedDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES users(UserID),
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID),
+    UNIQUE (UserID, ProductID)
+);
+
+-- Wstawianie testowego administratora
+INSERT INTO Users (Username, Email, Password, FirstName, LastName, UserRole, RegistrationDate)
+VALUES ('admin', 'admin@example.com', '$2y$10$6SbCAFfZTPGQJGsCY.5cauEVZQRrSNkRy2hcP8QcmL5qn6wENSzAS', 'Admin', 'System', 'admin', NOW());
+-- Hasło dla admina: admin123
+
+-- Dodanie kilku przykładowych kategorii
+INSERT INTO Categories (Name, Description) VALUES
+('Elektronika', 'Urządzenia elektroniczne, komputery, telefony itp.'),
+('Odzież', 'Ubrania, buty i akcesoria'),
+('Dom i Ogród', 'Meble, dekoracje, narzędzia ogrodowe'),
+('Książki', 'Książki, e-booki, audiobooki');
+
+CREATE TABLE IF NOT EXISTS cart (
+    CartID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT NOT NULL,
+    ProductID INT NOT NULL,
+    Quantity INT NOT NULL DEFAULT 1,
+    DateAdded DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES users(UserID) ON DELETE CASCADE,
+    FOREIGN KEY (ProductID) REFERENCES products(ProductID) ON DELETE CASCADE,
+    UNIQUE (UserID, ProductID) -- Prevent duplicate products in cart
+);
+
+-- Add an index to improve query performance
+CREATE INDEX idx_cart_user ON cart(UserID);

@@ -513,7 +513,7 @@ $categories_result = $conn->query($sql);
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php" style="text-decoration: none; color: inherit;">Serwis Ogłoszeniowy</a>
+                    <a href="dashboard.php" style="text-decoration: none; color: inherit;"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">

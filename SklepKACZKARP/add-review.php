@@ -417,7 +417,7 @@ if ($is_logged_in) {
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">

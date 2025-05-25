@@ -225,7 +225,7 @@ $conn->close();
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="index.php" style="text-decoration: none; color: inherit;">Tutaj logo</a>
+                    <a href="index.php" style="text-decoration: none; color: inherit;"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
             </div>
         </div>

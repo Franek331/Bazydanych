@@ -819,7 +819,7 @@ $conn->close();
         <div class="container">
             <div class="header-top">
                 <div class="logo-area">
-                    <a href="dashboard.php">Tutaj logo</a>
+                    <a href="dashboard.php"><img src="logo-sklepu.png" alt="logo"></a>
                 </div>
                 
                 <div class="search-area">
@@ -845,7 +845,7 @@ $conn->close();
                             <a href="add-product.php">Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            <a href="#">Moje kupno</a>
+                            <a href="purchase-history.php">Moje kupno</a>
                         </div>
                         <div class="menu-item">
                             <a href="messages.php">
