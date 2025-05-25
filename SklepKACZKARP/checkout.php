@@ -170,6 +170,70 @@ $stmt->close();
             box-sizing: border-box;
             font-family: Arial, sans-serif;
         }
+        .form-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .radio-group {
+            margin-top: 10px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .radio-option:hover {
+            background-color: #f8f9fa;
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .radio-option input {
+            margin-right: 12px;
+        }
+        
+        .radio-option img {
+            height: 30px;
+            max-width: 80px;
+            object-fit: contain;
+        }
+        
+        .payment-label {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
         
         body {
             background-color: #f8f9fa;
@@ -600,33 +664,53 @@ $stmt->close();
                             
                             <h2 style="margin-top: 30px;">Metoda płatności</h2>
                             
-                            <div class="form-group">
-                                <label for="payment_method">Wybierz metodę płatności</label>
-                                <select id="payment_method" name="payment_method" required>
-                                    <option value="credit_card">Karta kredytowa/debetowa</option>
-                                    <option value="blik">BLIK</option>
-                                    <option value="bank_transfer">Przelew bankowy</option>
-                                    <option value="paypal">PayPal</option>
-                                </select>
-                            </div>
                             
-                            <div class="form-group" id="credit_card_details">
-                                <label for="card_number">Numer karty</label>
-                                <input type="text" id="card_number" placeholder="1234 5678 9012 3456" maxlength="19">
-                                
-                                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                    <div style="flex: 1;">
-                                        <label for="expiry_date">Data ważności</label>
-                                        <input type="text" id="expiry_date" placeholder="MM/RR" maxlength="5">
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <label for="cvv">CVV</label>
-                                        <input type="text" id="cvv" placeholder="123" maxlength="3">
-                                    </div>
+                            
+                            <div class="form-section">
+                        
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <div class="payment-label">
+                                    <input type="radio" name="payment_method" value="bank_transfer" checked> 
+                                    <span>Przelew bankowy</span>
                                 </div>
-                            </div>
+                                <img src="Przelew.png" alt="Przelew">
+                            </label>
                             
+                            <label class="radio-option">
+                                <div class="payment-label">
+                                    <input type="radio" name="payment_method" value="blik"> 
+                                    <span>BLIK</span>
+                                </div>
+                                <img src="blik.png" alt="BLIK">
+                            </label>
+                            
+                            <label class="radio-option">
+                                <div class="payment-label">
+                                    <input type="radio" name="payment_method" value="credit_card"> 
+                                    <span>Karta kredytowa</span>
+                                </div>
+                                <img src="KartaKredytowa.png" alt="Karta kredytowa">
+                            </label>
+                            
+                            <label class="radio-option">
+                                <div class="payment-label">
+                                    <input type="radio" name="payment_method" value="paypal"> 
+                                    <span>PayPal</span>
+                                </div>
+                                <img src="Peypal.png" alt="PayPal">
+                            </label>
+                            
+                            <label class="radio-option">
+                                <div class="payment-label">
+                                    <input type="radio" name="payment_method" value="cash_on_delivery"> 
+                                    <span>Płatność przy odbiorze</span>
+                                </div>
+                                <img src="PrzyOdbiorze.png" alt="Płatność przy odbiorze">
+                            </label>
                             <button type="submit" name="place_order" class="checkout-button">Zapłać i zamów</button>
+                        </div>
+                    </div>
                         </form>
                     </div>
                     

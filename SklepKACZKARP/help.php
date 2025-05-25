@@ -436,7 +436,7 @@
                                 <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>
                             </div>
                             <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="info.php">O stronie</a>
+                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
                             </div>
                             <div class="menu-item">
                                 <a href="logout.php" style="text-decoration: none; color: inherit;">wyloguj</a>

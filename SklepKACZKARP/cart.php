@@ -428,7 +428,7 @@ $stmt->close();
                     <h3><?php echo number_format($total_price, 2, ',', ' '); ?> zł</h3>
                 </div>
                 
-                <a href="checkout.php" class="checkout-btn" style="display: block; text-align: center; text-decoration: none;">Przejdź do kasy</a>
+                <a href="checkout2.php" class="checkout-btn" style="display: block; text-align: center; text-decoration: none;">Przejdź do kasy</a>
             </div>
         <?php endif; ?>
     </main>
