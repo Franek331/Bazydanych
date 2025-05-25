@@ -365,6 +365,9 @@ $stmt->close();
                         <div class="menu-item">
                             Wiadomości
                         </div>
+                         <div class="menu-item">
+                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                            </div>
                         <div class="menu-item">
                             <a href="logout.php">wyloguj</a>
                         </div>

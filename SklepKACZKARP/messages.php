@@ -855,6 +855,9 @@ $conn->close();
                                 <?php endif; ?>
                             </a>
                         </div>
+                         <div class="menu-item">
+                                <a style="text-decoration: none; color: inherit;" href="info.php">O stronie</a>
+                            </div>
                         <div class="menu-item">
                             <a href="logout.php">wyloguj</a>
                         </div>

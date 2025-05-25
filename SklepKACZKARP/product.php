@@ -651,6 +651,9 @@ if ($is_logged_in) {
                             <a href="add-product.php" class="menu-item">Moje oferty</a>
                             <div class="menu-item">Moje kupno</div>
                             <div class="menu-item">  <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a></div>
+                             <div class="menu-item">
+                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                            </div>
                             <a href="logout.php" class="menu-item">Wyloguj</a>
                         <?php else: ?>
                             <a href="login.php" class="menu-item">Zaloguj się</a>

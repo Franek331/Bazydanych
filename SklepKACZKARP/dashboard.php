@@ -508,6 +508,9 @@
                                 <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>
                             </div>
                             <div class="menu-item">
+                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                            </div>
+                            <div class="menu-item">
                                 <a href="logout.php" style="text-decoration: none; color: inherit;">wyloguj</a>
                             </div>
                         <?php else: ?>
@@ -779,6 +782,11 @@
         <div class="container">
             <p>&copy; 2025 Serwis Ogłoszeniowy. Wszelkie prawa zastrzeżone.</p>
         </div>
+        <!-- <p  style="float: left;">Autorzy: Franciszek Karpiuk, Jakub Kaczmarek </p>
+        <br>
+        <p style="float: left;">Kontakt: </p>
+        <br>
+        <p style="float: left;">Wersja aplikacji: 1.04.25 Testowa</p> -->
     </footer>
 
     <script>
