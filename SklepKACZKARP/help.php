@@ -505,8 +505,8 @@
         
         <div class="info-card">
             <h2>Informacje Techniczne</h2>
-            <p><strong>Wersja aplikacji:</strong> 1.04.25 (Testowa)</p>
-            <p><strong>Data ostatniej aktualizacji:</strong> 15.05.2025</p>
+            <p><strong>Wersja aplikacji:</strong> 1.05.25T (Testowa)</p>
+            <p><strong>Data ostatniej aktualizacji:</strong> 25.05.2025</p>
             <p><strong>Technologie:</strong> PHP, MySQL, HTML5, CSS3, JavaScript</p>
             <p><strong>Przeglądarki:</strong> Aplikacja działa poprawnie na najnowszych wersjach Chrome, Firefox, Safari i Edge.</p>
             <p><strong>Wymagania systemowe:</strong> Dowolny nowoczesny system operacyjny z dostępem do internetu.</p>
@@ -553,7 +553,7 @@
         
         <div class="info-card">
             <h2>Kontakt</h2>
-            <p><strong>Adres e-mail wsparcia:</strong> pomoc@serwisogloszeniowyprzyklad.pl</p>
+            <p><strong>Adres e-mail wsparcia: wystawto329@gmail.com</strong> </p>
             <p><strong>Telefon:</strong> +48 123 456 789 (w godz. 9:00-17:00, pon-pt)</p>
             <p><strong>Adres:</strong> ul. Programistów 123, 00-000 Warszawa</p>
             
@@ -594,8 +594,8 @@
         <div class="container">
             <p>&copy; 2025 Serwis Ogłoszeniowy. Wszelkie prawa zastrzeżone.</p>
             <p>Autorzy: Franciszek Karpiuk, Jakub Kaczmarek</p>
-            <p>Kontakt: pomoc@serwisogloszeniowyprzyklad.pl</p>
-            <p>Wersja aplikacji: 1.04.25 Testowa</p>
+            <p>Kontakt: wystawto329@gmail.com</p>
+            <p>Wersja aplikacji: 1.05.25 Testowa</p>
         </div>
     </footer>
 
