@@ -424,29 +424,29 @@
                     <div class="user-menu" id="userMenu">
                         <?php if ($is_logged_in): ?>
                             <div class="menu-item">
-                                <a href="account_management.php">Zarządzaj kontem</a>
+                                <a href="account_management.php">👤Zarządzaj kontem</a>
                             </div>
                             <div class="menu-item">
-                                <a href="add-product.php">Moje oferty</a>
+                                <a href="add-product.php">📦Moje oferty</a>
                             </div>
                             <div class="menu-item">
-                                <a href="purchase-history.php">Moje kupno</a>
+                                <a href="purchase-history.php">🛒Moje kupno</a>
                             </div>
                             <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a>
+                                <a style="text-decoration: none; color: inherit;" href="messages.php">💬Wiadomości</a>
                             </div>
                             <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                                <a style="text-decoration: none; color: inherit;" href="help.php">ℹ️O stronie</a>
                             </div>
                             <div class="menu-item">
-                                <a href="logout.php" style="text-decoration: none; color: inherit;">wyloguj</a>
+                                <a href="logout.php" style="text-decoration: none; color: inherit;">🚪Wyloguj</a>
                             </div>
                         <?php else: ?>
                             <div class="menu-item">
-                                <a href="login.php" style="text-decoration: none; color: inherit;">Zaloguj się</a>
+                                <a href="login.php" style="text-decoration: none; color: inherit;">🔐Zaloguj się</a>
                             </div>
                             <div class="menu-item">
-                                <a href="register.php" style="text-decoration: none; color: inherit;">Zarejestruj się</a>
+                                <a href="register.php" style="text-decoration: none; color: inherit;">🧾Zarejestruj się</a>
                             </div>
                         <?php endif; ?>
                     </div>

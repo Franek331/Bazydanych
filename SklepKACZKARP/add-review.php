@@ -440,14 +440,14 @@ if ($is_logged_in) {
                     
                     <div class="user-menu" id="userMenu">
                         <?php if ($is_logged_in): ?>
-                            <a href="account_management.php" class="menu-item">Zarządzaj kontem</a>
-                            <a href="add-product.php" class="menu-item">Moje oferty</a>
-                            <div class="menu-item">Moje kupno</div>
-                            <div class="menu-item">  <a style="text-decoration: none; color: inherit;" href="messages.php">Wiadomości</a></div>
+                            <a href="account_management.php" class="menu-item">👤Zarządzaj kontem</a>
+                            <a href="add-product.php" class="menu-item">📦Moje oferty</a>
+                            <div class="menu-item">🛒Moje kupno</div>
+                            <div class="menu-item">  <a style="text-decoration: none; color: inherit;" href="messages.php">💬Wiadomości</a></div>
                              <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                                <a style="text-decoration: none; color: inherit;" href="help.php">ℹ️O stronie</a>
                             </div>
-                            <a href="logout.php" class="menu-item">Wyloguj</a>
+                            <a href="logout.php" class="menu-item">🚪Wyloguj</a>
                         <?php else: ?>
                             <a href="login.php" class="menu-item">Zaloguj się</a>
                             <a href="register.php" class="menu-item">Zarejestruj się</a>

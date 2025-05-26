@@ -839,27 +839,27 @@ $conn->close();
                     </div>
                     <div class="user-menu" id="userMenu">
                         <div class="menu-item">
-                            <a href="account_management.php">Zarządzaj kontem</a>
+                            <a href="account_management.php">👤Zarządzaj kontem</a>
                         </div>
                         <div class="menu-item">
-                            <a href="add-product.php">Moje oferty</a>
+                            <a href="add-product.php">📦Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            <a href="purchase-history.php">Moje kupno</a>
+                            <a href="purchase-history.php">🛒Moje kupno</a>
                         </div>
                         <div class="menu-item">
                             <a href="messages.php">
-                                Wiadomości
+                                💬Wiadomości
                                 <?php if ($unread_count > 0): ?>
                                 <span>(<?php echo $unread_count; ?> nieprzeczytane)</span>
                                 <?php endif; ?>
                             </a>
                         </div>
                          <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="info.php">O stronie</a>
+                                <a style="text-decoration: none; color: inherit;" href="info.php">ℹ️O stronie</a>
                             </div>
                         <div class="menu-item">
-                            <a href="logout.php">wyloguj</a>
+                            <a href="logout.php">🚪Wyloguj</a>
                         </div>
                     </div>
                 </div>

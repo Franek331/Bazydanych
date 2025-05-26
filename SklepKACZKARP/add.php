@@ -530,22 +530,22 @@ $categories_result = $conn->query($sql);
                     
                     <div class="user-menu" id="userMenu">
                         <div class="menu-item">
-                            <a href="profile.php" style="text-decoration: none; color: inherit;">Zarządzaj kontem</a>
+                            <a href="profile.php" style="text-decoration: none; color: inherit;">👤Zarządzaj kontem</a>
                         </div>
                         <div class="menu-item">
-                            <a href="myproducts.php" style="text-decoration: none; color: inherit;">Moje oferty</a>
+                            <a href="myproducts.php" style="text-decoration: none; color: inherit;">📦Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            <a href="myorders.php" style="text-decoration: none; color: inherit;">Moje kupno</a>
+                            <a href="myorders.php" style="text-decoration: none; color: inherit;">🛒Moje kupno</a>
                         </div>
                         <div class="menu-item">
-                            <a href="messages.php" style="text-decoration: none; color: inherit;">Wiadomości</a>
+                            <a href="messages.php" style="text-decoration: none; color: inherit;">💬Wiadomości</a>
                         </div>
                          <div class="menu-item">
-                                <a style="text-decoration: none; color: inherit;" href="help.php">O stronie</a>
+                                <a style="text-decoration: none; color: inherit;" href="help.php">ℹ️O stronie</a>
                             </div>
                         <div class="menu-item">
-                            <a href="logout.php" style="text-decoration: none; color: inherit;">Wyloguj</a>
+                            <a href="logout.php" style="text-decoration: none; color: inherit;">🚪Wyloguj</a>
                         </div>
                     </div>
                 </div>

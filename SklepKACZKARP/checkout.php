@@ -589,22 +589,22 @@ $stmt->close();
                     
                     <div class="user-menu" id="userMenu">
                         <div class="menu-item">
-                            <a href="account_management.php">Zarządzaj kontem</a>
+                            <a href="account_management.php">👤Zarządzaj kontem</a>
                         </div>
                         <div class="menu-item">
-                            <a href="add-product.php">Moje oferty</a>
+                            <a href="add-product.php">📦Moje oferty</a>
                         </div>
                         <div class="menu-item">
-                            <a href="purchase-history.php">Moje kupno</a>
+                            <a href="purchase-history.php">🛒Moje kupno</a>
                         </div>
                         <div class="menu-item">
-                            <a href="messages.php">Wiadomości</a>
+                            <a href="messages.php">💬Wiadomości</a>
                         </div>
                         <div class="menu-item">
-                            <a href="help.php">O stronie</a>
+                            <a href="help.php">ℹ️O stronie</a>
                         </div>
                         <div class="menu-item">
-                            <a href="logout.php">wyloguj</a>
+                            <a href="logout.php">🚪Wyloguj</a>
                         </div>
                     </div>
                 </div>
